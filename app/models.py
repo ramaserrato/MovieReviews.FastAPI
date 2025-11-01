@@ -19,7 +19,9 @@ class Pelicula(Base):
     tituloPelicula = Column(String(255), nullable=False, unique=True)
     directorPelicula = Column(String(100))
     añoPelicula = Column(Integer)
-
+    generos = Column(String(100))
+    poster_url = Column(String(255))
+    
     reviews = relationship("Review", back_populates="pelicula")
 
 class Review(Base):

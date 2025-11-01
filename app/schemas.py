@@ -24,6 +24,8 @@ class PeliculaBase(BaseModel):
     tituloPelicula: str
     directorPelicula: Optional[str] = None
     añoPelicula: Optional[int] = None
+    generos: Optional[str] = None
+    poster_url: Optional[str] = None
 
 class PeliculaCreate(PeliculaBase):
     pass

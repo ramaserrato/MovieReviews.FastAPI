@@ -39,7 +39,11 @@ def create_pelicula(db: Session, pelicula: schemas.PeliculaCreate):
     db_pelicula = models.Pelicula(
         tituloPelicula=pelicula.tituloPelicula,
         directorPelicula=pelicula.directorPelicula,
-        añoPelicula=pelicula.añoPelicula
+        añoPelicula=pelicula.añoPelicula,
+        # AGREGA LOS NUEVOS CAMPOS
+        generos=pelicula.generos,
+        poster_url=pelicula.poster_url
+        # Agrega más campos si es necesario
     )
     db.add(db_pelicula)
     db.commit()
