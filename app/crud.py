@@ -1,6 +1,7 @@
 # app/crud.py
 from sqlalchemy.orm import Session
 from . import models, schemas
+from typing import Optional
 
 # CRUD para Usuarios
 def get_usuario(db: Session, usuario_id: int):
@@ -29,8 +30,18 @@ def create_usuario(db: Session, usuario: schemas.UsuarioCreate):
 def get_pelicula(db: Session, pelicula_id: int):
     return db.query(models.Pelicula).filter(models.Pelicula.idPelicula == pelicula_id).first()
 
-def get_peliculas(db: Session, skip: int = 0, limit: int = 100):
-    return db.query(models.Pelicula).offset(skip).limit(limit).all()
+def get_peliculas(
+    db: Session, 
+    skip: int = 0, 
+    limit: int = 100, 
+    titulo: Optional[str] = None 
+):
+    query = db.query(models.Pelicula) 
+    
+    if titulo: 
+        query = query.filter(models.Pelicula.tituloPelicula.ilike(f"%{titulo}%"))
+        
+    return query.offset(skip).limit(limit).all()
 
 def get_pelicula_by_titulo(db: Session, titulo: str):
     return db.query(models.Pelicula).filter(models.Pelicula.tituloPelicula == titulo).first()

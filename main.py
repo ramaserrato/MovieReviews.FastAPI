@@ -4,17 +4,9 @@ from sqlalchemy.orm import Session
 from app.database import SessionLocal, engine
 from app import models, schemas, crud
 from fastapi.middleware.cors import CORSMiddleware
+from typing import Optional
 
 app = FastAPI(title="MovieReviews", version="1.0.0")
-
-# Agregar esto ANTES de definir los endpoints
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173", "http://localhost:8000", "http://127.0.0.1:8000"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
 
 # Crear tablas
 models.Base.metadata.create_all(bind=engine)
@@ -60,8 +52,13 @@ def crear_pelicula(pelicula: schemas.PeliculaCreate, db: Session = Depends(get_d
     return crud.create_pelicula(db=db, pelicula=pelicula)
 
 @app.get("/peliculas/", response_model=list[schemas.Pelicula])
-def leer_peliculas(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    peliculas = crud.get_peliculas(db, skip=skip, limit=limit)
+def leer_peliculas(
+    skip: int = 0, 
+    limit: int = 100, 
+    titulo: Optional[str] = None,
+    db: Session = Depends(get_db)
+):
+    peliculas = crud.get_peliculas(db, skip=skip, limit=limit, titulo=titulo) 
     return peliculas
 
 @app.get("/peliculas/{pelicula_id}", response_model=schemas.Pelicula)
