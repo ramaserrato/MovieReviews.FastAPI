@@ -1,10 +1,10 @@
-# main.py
 from fastapi import FastAPI, Depends, HTTPException, Form
 from sqlalchemy.orm import Session
 from app.database import SessionLocal, engine
 from app import models, schemas, crud
 from fastapi.middleware.cors import CORSMiddleware
 from typing import Optional
+from app.ai_service import sentiment_analyzer  
 
 app = FastAPI(title="MovieReviews", version="1.0.0")
 
@@ -113,6 +113,7 @@ app.add_middleware(
 )
 
 # Endpoint para crear reseña desde el formulario
+# Endpoint para crear reseña desde el formulario CON ANÁLISIS DE IA
 @app.post("/crear-resena/")
 async def crear_resena_completa(
     nombre: str = Form(...),
@@ -145,7 +146,12 @@ async def crear_resena_completa(
         if not pelicula_db:
             raise HTTPException(status_code=404, detail="Película no encontrada")
         
-        # 3. Crear la reseña
+        # 3. ANALIZAR LA RESEÑA CON IA
+        print("🤖 Analizando reseña con IA...")
+        analisis_ia = sentiment_analyzer.analyze_sentiment(reseña)
+        print(f"✅ Resultado IA: {analisis_ia}")
+        
+        # 4. Crear la reseña
         review_data = schemas.ReviewCreate(
             textReview=reseña,
             numPersonaReview=usuario.idUsuario,
@@ -155,11 +161,13 @@ async def crear_resena_completa(
         review = crud.create_review(db, review_data)
         print(f"Reseña creada: {review.idReview}")
         
+        # 5. Devolver respuesta con análisis de IA
         return {
-            "mensaje": "Reseña creada exitosamente",
+            "mensaje": "Reseña creada y analizada exitosamente",
             "usuario_id": usuario.idUsuario,
             "pelicula_id": pelicula_db.idPelicula,
-            "review_id": review.idReview
+            "review_id": review.idReview,
+            "analisis_ia": analisis_ia  # ← NUEVO: resultado de la IA
         }
         
     except HTTPException:

@@ -1,0 +1,30 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Test IA Interactivo",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/test_ia_interactivo.py",
+            "console": "integratedTerminal",
+            "justMyCode": true
+        },
+        {
+            "name": "Test IA con Args",
+            "type": "python", 
+            "request": "launch",
+            "program": "${workspaceFolder}/test_ia_args.py",
+            "args": ["I loved this movie! Amazing acting!"],
+            "console": "integratedTerminal",
+            "justMyCode": true
+        },
+        {
+            "name": "Run FastAPI",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/main.py",
+            "console": "integratedTerminal",
+            "justMyCode": true
+        }
+    ]
+}
