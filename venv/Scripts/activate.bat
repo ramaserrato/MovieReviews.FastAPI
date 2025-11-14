@@ -8,7 +8,7 @@ if defined _OLD_CODEPAGE (
     "%SystemRoot%\System32\chcp.com" 65001 > nul
 )
 
-set VIRTUAL_ENV=C:\Users\Ramiro\Desktop\UNSAM\BASES DE DATOS\proyectoFastAPI\venv
+set VIRTUAL_ENV=C:\Users\agust\Documents\UNSAM\BASE_DE_DATOS\MovieReviews.FastAPI\venv
 
 if not defined PROMPT set PROMPT=$P$G
 

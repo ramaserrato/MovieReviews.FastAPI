@@ -35,7 +35,7 @@ deactivate () {
 # unset irrelevant variables
 deactivate nondestructive
 
-VIRTUAL_ENV="C:\Users\Ramiro\Desktop\UNSAM\BASES DE DATOS\proyectoFastAPI\venv"
+VIRTUAL_ENV="C:\Users\agust\Documents\UNSAM\BASE_DE_DATOS\MovieReviews.FastAPI\venv"
 export VIRTUAL_ENV
 
 _OLD_VIRTUAL_PATH="$PATH"
