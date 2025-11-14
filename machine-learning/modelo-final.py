@@ -1,3 +1,4 @@
+# --- Inicio: Contenido de modelo-final.py ---
 import joblib
 import re
 import nltk
@@ -5,10 +6,9 @@ from nltk.corpus import stopwords
 import sys
 import logging
 from typing import Literal, Optional, Set
+from deep_translator import GoogleTranslator  # <-- 1. IMPORTAR LA LIBRERÍA
 
 # --- Configuración del Logging ---
-# Usar logging es más profesional que print()
-# Los logs irán a la consola (stderr por defecto)
 logging.basicConfig(
     level=logging.INFO, 
     format='[%(levelname)s] %(message)s'
@@ -57,20 +57,19 @@ def _cargar_pipeline(filepath: str) -> Optional[object]:
     Se ejecuta una vez cuando se importa el módulo.
     """
     try:
+        # Asumimos que el .pkl está en la misma carpeta que este script
         pipeline = joblib.load(filepath)
         log.info(f"Pipeline de sentimiento cargado desde '{filepath}'")
         return pipeline
     except FileNotFoundError:
         log.error(f"¡ERROR! Archivo del pipeline no encontrado: '{filepath}'")
-        log.error("Asegúrate de ejecutar 'entrenar_modelo.py' primero.")
+        log.error("Asegúrate de que 'sentimiento_pipeline.pkl' esté en la misma carpeta.")
         return None
     except Exception as e:
         log.error(f"¡ERROR! No se pudo cargar el pipeline: {e}", exc_info=True)
         return None
 
 # --- Inicialización Global ---
-# Estas variables se crean UNA VEZ cuando FastAPI inicia e importa este archivo.
-# Esto es mucho más eficiente que cargarlas en cada llamada a la API.
 STOP_WORDS_MODIFICADAS = _cargar_stopwords()
 PIPELINE = _cargar_pipeline(PIPELINE_PATH)
 
@@ -78,11 +77,8 @@ PIPELINE = _cargar_pipeline(PIPELINE_PATH)
 
 def normalizar_texto(texto: str) -> str:
     """
-    Limpia el texto. 
-    
-    ADVERTENCIA: Esta función es una copia de la que está en 'entrenar_modelo.py'.
-    Si la cambias aquí, ¡debes cambiarla allí también y re-entrenar!
-    Lo ideal es tener esta función en un 'utils.py' e importarla en ambos scripts.
+    Limpia el texto. Esta función AHORA SÓLO debe procesar inglés,
+    ya que la traducción se hace antes.
     """
     if not isinstance(texto, str):
         return ""
@@ -102,7 +98,8 @@ def clasificar_sentimiento(
     debug: bool = False
 ) -> Literal["Positivo", "Negativo", "Neutro", None]:
     """
-    Clasifica una reseña como Positiva, Negativa o Neutra usando probabilidades.
+    Traduce (si es necesario) y clasifica una reseña como
+    Positiva, Negativa o Neutra.
     """
     if PIPELINE is None:
         log.warning("El pipeline no está cargado. Saltando clasificación.")
@@ -111,24 +108,48 @@ def clasificar_sentimiento(
     if not isinstance(texto_resena, str) or not texto_resena.strip():
         return None # No clasificar texto vacío
 
-    # 1. Normalizar el texto de entrada
-    texto_normalizado = normalizar_texto(texto_resena)
+    # --- 2. PASO DE TRADUCCIÓN ---
+    texto_para_normalizar = texto_resena
+    try:
+        # Traducir de 'auto' (detecta idioma) a inglés ('en')
+        # Poner un timeout corto para que la API no se cuelgue si el traductor falla
+        # NOTA: deep-translator maneja internamente la rotación de IPs/APIs de Google
+        texto_traducido = GoogleTranslator(source='auto', target='en').translate(text=texto_resena, timeout=5)
+        
+        # A veces deep-translator devuelve None si falla o el texto es idéntico
+        if texto_traducido:
+            texto_para_normalizar = texto_traducido
+            if debug:
+                log.info(f"Debug: Texto Original = {texto_resena[:60]}...")
+                log.info(f"Debug: Texto Traducido (EN) = {texto_traducido[:60]}...")
+        else:
+             if debug:
+                log.info(f"Debug: Traducción devolvió None o es idéntico. Usando texto original.")
+
+    except Exception as e:
+        # No mostrar el traceback completo en producción, solo el error.
+        # Es común que falle si el texto es muy corto o incomprensible.
+        log.warning(f"Error durante la traducción: {e}. Se usará el texto original.")
+        # Fallback: si la traducción falla, intenta clasificar el texto original
+        texto_para_normalizar = texto_resena
+    # --- FIN DEL PASO DE TRADUCCIÓN ---
+
+    # 3. Normalizar el texto (que ahora está en inglés)
+    texto_normalizado = normalizar_texto(texto_para_normalizar)
     
     if not texto_normalizado.strip():
+        # Esto puede pasar si la reseña solo contenía stopwords
         return None # No clasificar si la normalización lo deja vacío
 
-    # 2. Obtener probabilidades
+    # 4. Obtener probabilidades
     try:
-        # El pipeline se encarga de la vectorización automáticamente
         probabilidades = PIPELINE.predict_proba([texto_normalizado])
         prob_positiva = probabilidades[0][1] # Probabilidad de ser 'positivo' (clase 1)
 
         if debug:
-            # log.debug no se mostrará a menos que configures level=logging.DEBUG
-            # Usamos info por ahora para que sea visible
             log.info(f"Debug: Prob Positiva = {prob_positiva:.4f} | Texto: '{texto_normalizado[:50]}...'")
 
-        # 3. Aplicar lógica de 3 clases
+        # 5. Aplicar lógica de 3 clases
         if prob_positiva > NEUTRAL_THRESHOLD_HIGH:
             return SENTIMIENTO_POSITIVO
         elif prob_positiva < NEUTRAL_THRESHOLD_LOW:
@@ -137,7 +158,6 @@ def clasificar_sentimiento(
             return SENTIMIENTO_NEUTRO
 
     except Exception as e:
-        # log.error con exc_info=True imprimirá el error completo (traceback)
         log.error(f"Falla al predecir probabilidad: {e}", exc_info=True)
         return None
 
@@ -147,19 +167,27 @@ if __name__ == "__main__":
         print("\n--- Realizando pruebas de clasificación (con lógica neutra) ---")
 
         # Configurar el logger para que muestre mensajes DEBUG solo durante la prueba
-        logging.getLogger().setLevel(logging.DEBUG)
+        logging.getLogger().setLevel(logging.INFO) # Cambiado a INFO para ver los logs de debug
 
         resenas_prueba = [
+            # --- Casos en Inglés (como antes) ---
             "I absolutely loved this film. One of the best I've seen!",
             "A complete waste of time. The plot was boring and the acting was terrible.",
             "The movie was okay. Not great, but not terrible either. Some parts were interesting.",
-            "I didn't hate it, but I also didn't love it. It was just average."
+            "I didn't hate it, but I also didn't love it. It was just average.",
+            
+            # --- NUEVOS Casos en Español ---
+            "Esta película fue una absoluta maravilla. De las mejores que he visto.",
+            "Una completa pérdida de tiempo. La trama era aburrida y las actuaciones terribles.",
+            "La película estuvo bien. No fue genial, pero tampoco fue terrible. Algunas partes fueron interesantes.",
+            "No la odié, pero tampoco me encantó. Simplemente pasable."
         ]
         
         for resena in resenas_prueba:
-            # Pasamos debug=True para ver las probabilidades
+            # Pasamos debug=True para ver las probabilidades y la traducción
             resultado = clasificar_sentimiento(resena, debug=True)
             print(f"'{resena[:60]}...' -> {resultado}\n")
 
     else:
         print("\n[INFO] No se pueden ejecutar pruebas porque el pipeline no está cargado.")
+# --- Fin: Contenido de modelo-final.py ---

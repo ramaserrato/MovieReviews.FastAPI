@@ -1,3 +1,4 @@
+# --- Inicio: Contenido de entrenamiento.py ---
 import pandas as pd
 import re
 import nltk
@@ -9,7 +10,7 @@ from sklearn.metrics import classification_report, accuracy_score
 from sklearn.pipeline import Pipeline # Importar Pipeline
 import joblib
 import sys
-import csv # <--- Importamos CSV para lectura manual
+import csv # Importar csv (aunque no lo usemos directamente, es buena práctica)
 
 # --- Configuración de NLTK (LÓGICA MEJORADA) ---
 try:
@@ -48,68 +49,47 @@ def normalizar_texto(texto):
 
 def cargar_datos(filepath="IMDB Dataset.csv"):
     """
-    Carga y preprocesa el dataset (MODO ROBUSTO).
-    Lee el CSV manualmente para evitar errores de parsing.
+    Carga y preprocesa el dataset (MODO ROBUSTO v3).
+    La clave es usar la codificación correcta.
     """
-    print(f"Cargando el dataset de reseñas desde '{filepath}' (Modo Robusto)...")
+    print(f"Cargando el dataset de reseñas desde '{filepath}'...")
     
-    reviews = []
-    sentiments = []
-    lineas_saltadas = 0
-
     try:
-        with open(filepath, 'r', encoding='utf-8') as f:
-            # Usar csv.reader para manejar correctamente las comillas
-            reader = csv.reader(f, quotechar='"', delimiter=',')
-            
-            # Omitir el encabezado (review,sentiment)
-            try:
-                next(reader) 
-            except StopIteration:
-                print("[ERROR] Archivo CSV está vacío.", file=sys.stderr)
-                sys.exit(1)
-            
-            # Iterar línea por línea
-            for i, row in enumerate(reader):
-                # Una fila válida DEBE tener 2 columnas
-                if len(row) == 2:
-                    reviews.append(row[0])
-                    sentiments.append(row[1])
-                else:
-                    # Esta línea está rota (tiene más/menos de 2 columnas)
-                    lineas_saltadas += 1
-                    
+        # --- ¡LA SOLUCIÓN MÁS PROBABLE! ---
+        # Usar encoding='latin-1' (o 'ISO-8859-1') que es común en estos datasets.
+        df = pd.read_csv(
+            filepath, 
+            encoding='latin-1'
+        )
+        
     except FileNotFoundError:
         print(f"\n[ERROR] Archivo '{filepath}' no encontrado.", file=sys.stderr)
         print("Por favor, descarga el dataset de Kaggle y colócalo en esta carpeta.", file=sys.stderr)
         sys.exit(1)
-    except UnicodeDecodeError:
-        print(f"\n[ERROR] Problema de codificación. Asegúrate de que el CSV esté en UTF-8.", file=sys.stderr)
-        sys.exit(1)
     except Exception as e:
-        print(f"\n[ERROR] Ocurrió un error inesperado al leer el archivo: {e}", file=sys.stderr)
+        # Si latin-1 falla, informa del error
+        print(f"\n[ERROR] No se pudo leer el CSV. Error: {e}", file=sys.stderr)
+        print("Verifica que el archivo no esté corrupto o prueba otra codificación como 'utf-8'.")
         sys.exit(1)
 
-    if lineas_saltadas > 0:
-        print(f"[INFO] Se saltaron {lineas_saltadas} líneas malformadas.")
-
-    # Crear DataFrame desde las listas
-    df = pd.DataFrame({
-        'review': reviews,
-        'sentiment': sentiments
-    })
-
+    # --- Verificación de columnas ---
+    if 'review' not in df.columns or 'sentiment' not in df.columns:
+        print(f"[ERROR] El CSV '{filepath}' no tiene las columnas 'review' y 'sentiment'.")
+        print(f"Columnas encontradas: {df.columns.tolist()}")
+        print("Asegúrate de que el CSV tenga los encabezados 'review' y 'sentiment'.")
+        sys.exit(1)
+        
     # --- Limpieza de datos ---
     df.dropna(subset=['review', 'sentiment'], inplace=True)
-    df['sentiment'] = df['sentiment'].astype(str).str.strip().str.strip('"')
+    df['sentiment'] = df['sentiment'].astype(str).str.strip()
     df = df[df['sentiment'].isin(['positive', 'negative'])]
     
     print(f"Se encontraron {len(df)} filas válidas después de filtrar.")
 
     # Si después de filtrar no queda nada, es un problema
-    if df.empty:
-        print("[ERROR] El DataFrame está vacío después de limpiar y filtrar.")
-        print("Verifica el contenido de tu archivo 'IMDB Dataset.csv'.")
+    if df.empty or len(df) < 1000: # Un chequeo de sanidad
+        print("[ERROR] El DataFrame está casi vacío después de filtrar.")
+        print("Esto indica un problema grave con la lectura del archivo CSV.")
         sys.exit(1)
 
     print("Normalizando texto... (esto puede tardar unos segundos)")
@@ -168,3 +148,4 @@ if __name__ == "__main__":
     X_datos, y_labels = cargar_datos()
     modelo_pipeline = entrenar_y_evaluar(X_datos, y_labels)
     guardar_pipeline(modelo_pipeline)
+# --- Fin: Contenido de entrenamiento.py ---
