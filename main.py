@@ -4,7 +4,7 @@ from app.database import SessionLocal, engine
 from app import models, schemas, crud
 from fastapi.middleware.cors import CORSMiddleware
 from typing import Optional
-from app.ai_service import sentiment_analyzer  
+from app.ai_service import analizar_sentimiento, cargar_modelo, cargar_stopwords
 
 app = FastAPI(title="MovieReviews", version="1.0.0")
 
