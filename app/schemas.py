@@ -41,6 +41,9 @@ class ReviewBase(BaseModel):
     textReview: str
     numPersonaReview: int
     numPeliculareview: int
+    resultado_review: Optional[str] = None
+    porcentaje_review: Optional[float] = None
+
 
 class ReviewCreate(ReviewBase):
     pass
@@ -55,3 +58,19 @@ class Review(ReviewBase):
 class ReviewWithRelations(Review):
     usuario: Usuario
     pelicula: Pelicula
+
+class ResultadoReview(BaseModel):
+    idReview: int
+    nombre: str
+    apellido: str
+    textReview: str
+    sentimiento: str
+    porcentaje: float
+    pelicula_titulo: str
+    pelicula_poster: str | None = None
+    pelicula_anio: int | None = None
+    pelicula_director: str | None = None
+    pelicula_generos: str | None = None
+
+    class Config:
+        orm_mode = True

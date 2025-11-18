@@ -26,10 +26,14 @@ class Pelicula(Base):
 
 class Review(Base):
     __tablename__ = "Reviews"
+    
     idReview = Column(Integer, primary_key=True, index=True)
     numPersonaReview = Column(Integer, ForeignKey("Usuarios.idUsuario"))
     numPeliculareview = Column(Integer, ForeignKey("Peliculas.idPelicula"))
     textReview = Column(String(1000))
+
+    resultado_review = Column(String(20))  # POSITIVO / NEGATIVO / NEUTRO
+    porcentaje_review = Column(Integer)    # o Double si querés decimal
 
     usuario = relationship("Usuario", back_populates="reviews")
     pelicula = relationship("Pelicula", back_populates="reviews")

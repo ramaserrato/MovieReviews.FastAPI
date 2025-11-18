@@ -72,12 +72,16 @@ def create_review(db: Session, review: schemas.ReviewCreate):
     db_review = models.Review(
         textReview=review.textReview,
         numPersonaReview=review.numPersonaReview,
-        numPeliculareview=review.numPeliculareview
+        numPeliculareview=review.numPeliculareview,
+        resultado_review=review.resultado_review,
+        porcentaje_review=review.porcentaje_review
     )
     db.add(db_review)
     db.commit()
     db.refresh(db_review)
+
     return db_review
+
 
 def get_reviews_by_usuario(db: Session, usuario_id: int):
     return db.query(models.Review).filter(models.Review.numPersonaReview == usuario_id).all()

@@ -5,6 +5,11 @@ from app import models, schemas, crud
 from fastapi.middleware.cors import CORSMiddleware
 from typing import Optional
 from app.ai_service import analizar_sentimiento, cargar_modelo, cargar_stopwords
+from app.services.peliculas import obtener_info_pelicula
+
+# cargar IA una vez
+modelo = cargar_modelo()
+stop_words = cargar_stopwords()
 
 app = FastAPI(title="MovieReviews", version="1.0.0")
 
@@ -113,24 +118,20 @@ app.add_middleware(
 )
 
 # Endpoint para crear reseña desde el formulario
-# Endpoint para crear reseña desde el formulario CON ANÁLISIS DE IA
 @app.post("/crear-resena/")
 async def crear_resena_completa(
     nombre: str = Form(...),
     apellido: str = Form(...), 
     pelicula: str = Form(...),
-    reseña: str = Form(...),  # <-- Con ñ
+    reseña: str = Form(...),
     db: Session = Depends(get_db)
 ):
     try:
-        print(f"Datos recibidos: {nombre}, {apellido}, {pelicula}, {reseña}")  # Debug
-        
-        # 1. Buscar o crear usuario (usando email temporal)
+        # 1. Buscar o crear usuario
         email_temp = f"{nombre}.{apellido}@temp.com"
         usuario = crud.get_usuario_by_email(db, email_temp)
-        
+
         if not usuario:
-            # Crear usuario temporal
             usuario_data = schemas.UsuarioCreate(
                 nombreUsuario=nombre,
                 apellidoUsuario=apellido,
@@ -139,39 +140,51 @@ async def crear_resena_completa(
                 generoFavUsuario="No especificado"
             )
             usuario = crud.create_usuario(db, usuario_data)
-            print(f"Usuario creado: {usuario.idUsuario}")
-        
+
         # 2. Buscar película por título
         pelicula_db = crud.get_pelicula_by_titulo(db, pelicula)
         if not pelicula_db:
             raise HTTPException(status_code=404, detail="Película no encontrada")
-        
-        # 3. ANALIZAR LA RESEÑA CON IA
-        print("🤖 Analizando reseña con IA...")
-        analisis_ia = sentiment_analyzer.analyze_sentiment(reseña)
-        print(f"✅ Resultado IA: {analisis_ia}")
-        
-        # 4. Crear la reseña
+
+        # 3. Analizar reseña con IA
+        analisis_ia = analizar_sentimiento(reseña, modelo, stop_words)
+
+        # 4. Crear reseña
         review_data = schemas.ReviewCreate(
             textReview=reseña,
             numPersonaReview=usuario.idUsuario,
             numPeliculareview=pelicula_db.idPelicula
         )
-        
         review = crud.create_review(db, review_data)
-        print(f"Reseña creada: {review.idReview}")
-        
-        # 5. Devolver respuesta con análisis de IA
+
+        # 5. Cargar película desde la BD
+        pelicula_info = crud.get_pelicula(db, pelicula_db.idPelicula)
+
+        # 6. Respuesta final
         return {
             "mensaje": "Reseña creada y analizada exitosamente",
-            "usuario_id": usuario.idUsuario,
-            "pelicula_id": pelicula_db.idPelicula,
-            "review_id": review.idReview,
-            "analisis_ia": analisis_ia  # ← NUEVO: resultado de la IA
+
+            "usuario": {
+                "nombre": usuario.nombreUsuario,
+                "apellido": usuario.apellidoUsuario
+            },
+
+            "review": {
+                "id": review.idReview,
+                "texto": reseña,
+                "resultado": analisis_ia["resultado"],
+                "porcentaje": analisis_ia["porcentaje"]
+            },
+
+            "pelicula": {
+                "id": pelicula_info.idPelicula,
+                "titulo": pelicula_info.tituloPelicula,
+                "poster": pelicula_info.poster_url,
+                "anio": pelicula_info.añoPelicula,
+                "director": pelicula_info.directorPelicula,
+                "generos": pelicula_info.generos
+            }
         }
-        
-    except HTTPException:
-        raise
+
     except Exception as e:
-        print(f"Error completo: {e}")
-        raise HTTPException(status_code=500, detail=f"Error al crear reseña: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))

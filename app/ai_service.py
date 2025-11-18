@@ -48,18 +48,14 @@ def analizar_sentimiento(texto, modelo, stop_words):
     
     if prob_positiva > 0.65:
         sentimiento = "POSITIVO"
-        emoji = "👍"
     elif prob_positiva < 0.15:
-        sentimiento = "NEGATIVO" 
-        emoji = "👎"
+        sentimiento = "NEGATIVO"
     else:
         sentimiento = "NEUTRO"
-        emoji = "😐"
     
     return {
-        'sentimiento': sentimiento,
-        'emoji': emoji,
-        'confianza': prob_positiva,
+        'resultado': sentimiento,
+        'porcentaje': prob_positiva,
         'texto_procesado': texto_procesado
     }
 
