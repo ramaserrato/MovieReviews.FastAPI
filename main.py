@@ -161,7 +161,7 @@ async def crear_resena_completa(
     try:
         # 🔄 **NUEVO: Traducir la reseña si está en español**
         reseña_traducida = reseña  # Por defecto usa el texto original
-        
+        print(reseña_traducida)
         # Detectar idioma y traducir si es español
         try:
             deteccion = translator.detect(reseña)
