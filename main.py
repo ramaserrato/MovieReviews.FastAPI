@@ -6,6 +6,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from typing import Optional
 from app.ai_service import analizar_sentimiento, cargar_modelo, cargar_stopwords
 from app.services.peliculas import obtener_info_pelicula
+from googletrans import Translator
+
+# Inicializar el traductor (fuera del endpoint)
+translator = Translator()
 
 # cargar IA una vez
 modelo = cargar_modelo()
@@ -143,6 +147,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
+
 # Endpoint para crear reseña desde el formulario
 @app.post("/crear-resena/")
 async def crear_resena_completa(
@@ -153,6 +159,20 @@ async def crear_resena_completa(
     db: Session = Depends(get_db)
 ):
     try:
+        # 🔄 **NUEVO: Traducir la reseña si está en español**
+        reseña_traducida = reseña  # Por defecto usa el texto original
+        
+        # Detectar idioma y traducir si es español
+        try:
+            deteccion = translator.detect(reseña)
+            if deteccion.lang == 'es':
+                traduccion = translator.translate(reseña, src='es', dest='en')
+                reseña_traducida = traduccion.text
+                print(f"Texto traducido: {reseña} -> {reseña_traducida}")
+        except Exception as trans_error:
+            print(f"Error en traducción: {trans_error}")
+            # Si falla la traducción, usar el texto original
+        
         # 1. Buscar o crear usuario
         email_temp = f"{nombre}.{apellido}@temp.com"
         usuario = crud.get_usuario_by_email(db, email_temp)
@@ -172,12 +192,12 @@ async def crear_resena_completa(
         if not pelicula_db:
             raise HTTPException(status_code=404, detail="Película no encontrada")
 
-        # 3. Analizar reseña con IA
-        analisis_ia = analizar_sentimiento(reseña, modelo, stop_words)
+        # 3. Analizar reseña con IA (usar la versión traducida)
+        analisis_ia = analizar_sentimiento(reseña_traducida, modelo, stop_words)
 
-        # 4. Crear reseña
+        # 4. Crear reseña (guardar el texto original en español)
         review_data = schemas.ReviewCreate(
-            textReview=reseña,
+            textReview=reseña,  # Guardar texto original
             numPersonaReview=usuario.idUsuario,
             numPeliculareview=pelicula_db.idPelicula,
             resultado_review=analisis_ia["resultado"],
@@ -191,6 +211,9 @@ async def crear_resena_completa(
         # 6. Respuesta final
         return {
             "mensaje": "Reseña creada y analizada exitosamente",
+            "traduccion_realizada": deteccion.lang == 'es' if 'deteccion' in locals() else False,
+            "texto_original": reseña,
+            "texto_analizado": reseña_traducida if 'deteccion' in locals() and deteccion.lang == 'es' else reseña,
 
             "usuario": {
                 "nombre": usuario.nombreUsuario,
@@ -216,7 +239,7 @@ async def crear_resena_completa(
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-
+    
 @app.get("/test-db")
 def test_database(db: Session = Depends(get_db)):
     """Endpoint para probar la conexión a la base de datos"""
