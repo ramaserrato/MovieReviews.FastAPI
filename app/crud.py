@@ -44,6 +44,14 @@ def get_peliculas(
         
     return query.offset(skip).limit(limit).all()
 
+
+def buscar_peliculas(db: Session, q: str):
+    return (
+        db.query(models.Pelicula)
+        .filter(models.Pelicula.tituloPelicula.like(f"%{q}%"))
+        .all()
+    )
+
 def get_pelicula_by_titulo(db: Session, titulo: str):
     return db.query(models.Pelicula).filter(models.Pelicula.tituloPelicula == titulo).first()
 

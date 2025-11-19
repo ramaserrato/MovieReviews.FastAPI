@@ -66,6 +66,13 @@ def leer_peliculas(
     peliculas = crud.get_peliculas(db, skip=skip, limit=limit, titulo=titulo) 
     return peliculas
 
+@app.get("/peliculas/buscar/", response_model=list[schemas.Pelicula])
+def buscar_peliculas(
+    q: str,                      # <- query param obligatorio
+    db: Session = Depends(get_db)
+):
+    return crud.buscar_peliculas(db, q)
+
 @app.get("/peliculas/{pelicula_id}", response_model=schemas.Pelicula)
 def leer_pelicula(pelicula_id: int, db: Session = Depends(get_db)):
     db_pelicula = crud.get_pelicula(db, pelicula_id=pelicula_id)
