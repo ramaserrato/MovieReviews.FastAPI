@@ -12,7 +12,7 @@ DB_USER = os.getenv("DB_USER")
 DB_PASS = os.getenv("DB_PASS")
 
 # Crear la URL de conexión (forma correcta)
-DATABASE_URL = f"mysql+pymysql://fastapi_user:1234@localhost:3306/moviereviews"
+DATABASE_URL = f"mysql+pymysql://{DB_USER}:{DB_PASS}@localhost:3306/moviereviews"
 
 # Crear el motor de conexión
 engine = create_engine(DATABASE_URL)
