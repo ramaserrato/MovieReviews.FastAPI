@@ -209,3 +209,21 @@ async def crear_resena_completa(
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/test-db")
+def test_database(db: Session = Depends(get_db)):
+    """Endpoint para probar la conexión a la base de datos"""
+    try:
+        # Contar películas
+        peliculas_count = db.query(models.Pelicula).count()
+        usuarios_count = db.query(models.Usuario).count()
+        reviews_count = db.query(models.Review).count()
+        
+        return {
+            "status": "Conexión exitosa",
+            "peliculas": peliculas_count,
+            "usuarios": usuarios_count, 
+            "reviews": reviews_count
+        }
+    except Exception as e:
+        return {"error": f"Error de base de datos: {str(e)}"}
