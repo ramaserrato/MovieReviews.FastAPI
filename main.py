@@ -73,6 +73,25 @@ def leer_pelicula(pelicula_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Película no encontrada")
     return db_pelicula
 
+
+@app.get("/peliculas/detalle/{pelicula_id}")
+def leer_detalle_pelicula(pelicula_id: int, db: Session = Depends(get_db)):
+    pelicula = crud.get_pelicula(db, pelicula_id=pelicula_id)
+    if pelicula is None:
+        raise HTTPException(status_code=404, detail="Película no encontrada")
+
+    # Segunda consulta
+    resena = crud.get_reviews_by_pelicula(db, pelicula_id)
+
+    valoracion = crud.get_valoracion_by_pelicula(db, pelicula_id)
+    # Armás un JSON con lo que vos quieras
+    return {
+        "pelicula": pelicula,
+        "resena": resena,
+        "valoracion": valoracion
+    }
+
+
 # Endpoints para Reviews
 @app.post("/reviews/", response_model=schemas.Review)
 def crear_review(review: schemas.ReviewCreate, db: Session = Depends(get_db)):
@@ -153,7 +172,9 @@ async def crear_resena_completa(
         review_data = schemas.ReviewCreate(
             textReview=reseña,
             numPersonaReview=usuario.idUsuario,
-            numPeliculareview=pelicula_db.idPelicula
+            numPeliculareview=pelicula_db.idPelicula,
+            resultado_review=analisis_ia["resultado"],
+            porcentaje_review=analisis_ia["porcentaje"]
         )
         review = crud.create_review(db, review_data)
 

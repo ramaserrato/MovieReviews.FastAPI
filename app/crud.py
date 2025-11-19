@@ -2,6 +2,7 @@
 from sqlalchemy.orm import Session
 from . import models, schemas
 from typing import Optional
+from sqlalchemy import func
 
 # CRUD para Usuarios
 def get_usuario(db: Session, usuario_id: int):
@@ -88,3 +89,14 @@ def get_reviews_by_usuario(db: Session, usuario_id: int):
 
 def get_reviews_by_pelicula(db: Session, pelicula_id: int):
     return db.query(models.Review).filter(models.Review.numPeliculareview == pelicula_id).all()
+
+
+
+
+def get_valoracion_by_pelicula(db: Session, pelicula_id: int):
+    promedio = (
+        db.query(func.avg(models.Review.porcentaje_review))
+        .filter(models.Review.numPeliculareview == pelicula_id)
+        .scalar()
+    )
+    return promedio
