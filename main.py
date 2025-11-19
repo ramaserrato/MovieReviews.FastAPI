@@ -70,6 +70,21 @@ def leer_peliculas(
     peliculas = crud.get_peliculas(db, skip=skip, limit=limit, titulo=titulo) 
     return peliculas
 
+@app.get("/peliculas/reviews", response_model=list[schemas.Pelicula])
+def leer_peliculas_con_reviews(
+    skip: int = 0, 
+    limit: int = 100, 
+    db: Session = Depends(get_db)
+):
+    peliculas = db.query(models.Pelicula)\
+        .join(models.Review, models.Pelicula.idPelicula == models.Review.numPeliculareview)\
+        .group_by(models.Pelicula.idPelicula)\
+        .offset(skip)\
+        .limit(limit)\
+        .all()
+    
+    return peliculas
+
 @app.get("/peliculas/buscar/", response_model=list[schemas.Pelicula])
 def buscar_peliculas(
     q: str,                      # <- query param obligatorio
